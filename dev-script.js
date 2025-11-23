@@ -124,6 +124,6 @@ app.get("/api/raw/:name", async (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🛡️  MonLuaProtector Server running on http://0.0.0.0:${PORT}`);
+  console.log(`🛡️ LuaProtector Server running on http://0.0.0.0:${PORT}`);
   console.log(`📊 Local storage mode - no GitHub needed`);
 });

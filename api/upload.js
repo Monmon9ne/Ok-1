@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
-
-let storage = {};
+import { storage, addScript } from "./storage.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -38,7 +37,7 @@ export default async function handler(req, res) {
     console.log(`🛡️  Code protected (invisible - zero-width characters)`);
 
     const id = randomUUID();
-    storage[name] = { id, content: invisibleCode, createdAt: new Date().toISOString() };
+    addScript(name, { id, content: invisibleCode, createdAt: new Date().toISOString() });
 
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const host = req.headers.host;

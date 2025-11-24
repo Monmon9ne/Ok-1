@@ -322,7 +322,7 @@
 
       <!-- Footer -->
       <div class="text-center mt-6 sm:mt-8 text-gray-500 text-xs sm:text-sm pb-4">
-        <p>v2.1 | Bảo vệ Script Lua</p>
+        <p>v2.9 | Bảo vệ Script Lua</p>
       </div>
     </div>
   </div>
@@ -433,12 +433,13 @@
         body: JSON.stringify({ text, name })
       });
       
+      const responseText = await res.text();
+      
       let data;
       try {
-        data = await res.json();
+        data = JSON.parse(responseText);
       } catch (e) {
-        const text = await res.text();
-        throw new Error(text || 'Lỗi không xác định từ server');
+        throw new Error(responseText || 'Lỗi không xác định từ server');
       }
       
       if (!res.ok) throw new Error(data.error || 'Lỗi khi tạo link');

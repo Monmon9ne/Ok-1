@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
-app.use(express.static("Onepublic"));
+app.use(express.static("."));
 
 // Storage file
 const STORAGE_FILE = path.join(__dirname, "Onedata", "scripts.json");
@@ -42,7 +42,7 @@ let storage = await loadStorage();
 
 // Serve index.html
 app.get("/", async (req, res) => {
-  const htmlPath = path.join(__dirname, "Onepublic", "index.html");
+  const htmlPath = path.join(__dirname, "index.html");
   try {
     const html = await fs.readFile(htmlPath, "utf8");
     res.setHeader("Content-Type", "text/html; charset=utf-8");

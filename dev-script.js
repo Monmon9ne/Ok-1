@@ -13,10 +13,7 @@ app.use(express.json());
 app.use(express.static("."));
 
 // Storage file
-const STORAGE_FILE = path.join(__dirname, "Onedata", "scripts.json");
-
-// Ensure data directory exists
-await fs.ensureDir(path.join(__dirname, "Onedata"));
+const STORAGE_FILE = path.join(__dirname, "scripts.json");
 
 // Load/save storage
 async function loadStorage() {

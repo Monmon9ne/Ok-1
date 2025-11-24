@@ -2,75 +2,188 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LuaProtector Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<style>textarea{resize:vertical;}</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  body { font-family: 'Inter', sans-serif; background: #1f2937; color:white; }
+  textarea { font-family: monospace; }
+  .btn-gradient { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); transition: 0.3s; }
+  .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.4);}
+  .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:50;}
+  .modal.active { display:flex; }
+</style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-4">
-<div class="max-w-4xl mx-auto space-y-4">
+<body class="p-6">
 
-<h1 class="text-2xl font-bold text-indigo-400">Dashboard</h1>
-<button onclick="logout()" class="bg-red-600 hover:bg-red-700 py-2 px-4 rounded">Logout</button>
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold mb-4">LuaProtector Dashboard</h1>
 
-<!-- Script list -->
-<div id="scriptsList" class="space-y-2 mt-4"></div>
+  <!-- Upload Section -->
+  <div class="bg-gray-800 p-4 rounded-lg mb-6 shadow-lg">
+    <div class="mb-2 font-semibold">Tải lên Script mới</div>
+    <input id="scriptName" type="text" placeholder="Tên script (VD: MyScript-1)" class="w-full mb-2 px-3 py-2 rounded bg-gray-700 border border-gray-600">
+    <div class="flex gap-2 mb-2">
+      <textarea id="luaText" placeholder="Dán code Lua hoặc upload file..." class="flex-1 px-3 py-2 rounded bg-gray-700 border border-gray-600 resize-none"></textarea>
+      <label class="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded cursor-pointer flex items-center gap-2">
+        <i class="fas fa-file-upload"></i> Upload
+        <input id="fileInput" type="file" accept=".lua,.txt" class="hidden" onchange="handleFileUpload()">
+      </label>
+    </div>
+    <button class="btn-gradient px-4 py-2 rounded" onclick="handleTextUpload()">
+      <i class="fas fa-check-circle"></i> Tạo Script
+    </button>
+    <p id="uploadMsg" class="mt-2 text-sm"></p>
+  </div>
+
+  <!-- Scripts List -->
+  <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
+    <h2 class="font-semibold mb-2">Danh sách Script</h2>
+    <div id="scriptList" class="space-y-2">Đang tải...</div>
+  </div>
+</div>
 
 <!-- Edit Modal -->
-<div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
-  <div class="bg-gray-800 p-6 rounded-xl w-full max-w-xl space-y-4">
-    <h2 class="text-xl font-bold">Edit Script</h2>
-    <input id="editName" placeholder="Script Name" class="w-full p-2 rounded bg-gray-700 border border-gray-600" />
-    <textarea id="editContent" class="w-full p-2 rounded bg-gray-700 border border-gray-600 h-64"></textarea>
-    <div class="flex gap-2 justify-end">
-      <button onclick="closeModal()" class="bg-gray-600 hover:bg-gray-700 py-2 px-4 rounded">Cancel</button>
-      <button onclick="saveEdit()" class="bg-indigo-500 hover:bg-indigo-600 py-2 px-4 rounded">Save</button>
+<div id="editModal" class="modal">
+  <div class="bg-gray-800 p-4 rounded-lg w-full max-w-lg relative">
+    <h3 class="font-bold mb-2">Chỉnh sửa Script</h3>
+    <input id="editName" class="w-full mb-2 px-3 py-2 rounded bg-gray-700 border border-gray-600" placeholder="Tên script">
+    <textarea id="editContent" class="w-full mb-2 px-3 py-2 rounded bg-gray-700 border border-gray-600 resize-none" rows="8"></textarea>
+    <div class="flex justify-end gap-2">
+      <button class="px-3 py-2 bg-red-600 rounded hover:bg-red-700" onclick="closeModal()">Hủy</button>
+      <button class="px-3 py-2 bg-green-600 rounded hover:bg-green-700" onclick="saveEdit()">Lưu</button>
     </div>
   </div>
 </div>
 
-</div>
 <script>
-if(localStorage.getItem('token')!=='admin-token'){window.location.href='login.html';}
-
-let storage = {}; // Lấy từ API
 let currentEdit = null;
 
-async function loadScripts(){
-  const res = await fetch('/api/list.js'); // API cần tạo
-  storage = await res.json();
-  const container=document.getElementById('scriptsList');
-  container.innerHTML=Object.keys(storage).map(name=>`
-    <div class="bg-gray-800 p-3 rounded flex justify-between items-center">
-      <div>
-        <p class="font-semibold">${name}</p>
-        <p class="text-xs text-gray-400">${storage[name].createdAt}</p>
+async function fetchScripts() {
+  const res = await fetch('/api/raw/list'); // giả sử bạn có API list script
+  if(!res.ok) return [];
+  return res.json();
+}
+
+function renderScripts(scripts) {
+  const container = document.getElementById('scriptList');
+  if(scripts.length===0){
+    container.innerHTML='<p class="text-gray-400">Chưa có script</p>';
+    return;
+  }
+  container.innerHTML = scripts.map(s => `
+    <div class="bg-gray-700 p-2 rounded flex justify-between items-center gap-2">
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-sm">${s.name}</p>
+        <p class="text-xs text-gray-300">ID: ${s.id}</p>
       </div>
-      <div class="flex gap-2">
-        <button onclick="editScript('${name}')" class="bg-blue-600 px-2 py-1 rounded">Edit</button>
-        <button onclick="deleteScript('${name}')" class="bg-red-600 px-2 py-1 rounded">Delete</button>
-        <button onclick="copyRaw('${name}')" class="bg-green-600 px-2 py-1 rounded">Raw</button>
-        <button onclick="copyLS('${name}')" class="bg-purple-600 px-2 py-1 rounded">LoadString</button>
+      <div class="flex gap-1 flex-shrink-0">
+        <button onclick="copyRaw('${s.name}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs flex items-center gap-1">
+          <i class="fas fa-copy"></i>Raw
+        </button>
+        <button onclick="copyLoadstring('${s.name}')" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs flex items-center gap-1">
+          <i class="fas fa-code"></i>LS
+        </button>
+        <button onclick="editScript('${s.name}')" class="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs flex items-center gap-1">
+          <i class="fas fa-edit"></i>Edit
+        </button>
+        <button onclick="deleteScript('${s.name}')" class="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs flex items-center gap-1">
+          <i class="fas fa-trash"></i>Del
+        </button>
       </div>
     </div>
   `).join('');
 }
 
-function logout(){localStorage.removeItem('token'); window.location.href='login.html';}
-
-function editScript(name){currentEdit=name; document.getElementById('editModal').classList.remove('hidden'); document.getElementById('editName').value=name; document.getElementById('editContent').value=storage[name].content.replace(/\u200D/g,'');}
-function closeModal(){document.getElementById('editModal').classList.add('hidden'); currentEdit=null;}
-
-async function saveEdit(){ 
-  const name=document.getElementById('editName').value;
-  const content=document.getElementById('editContent').value;
-  // Gọi API update
-  alert('⚠ Chức năng save cần API /api/update mới hoạt động'); 
-  closeModal(); 
+async function loadScripts() {
+  try{
+    const scripts = await fetchScripts();
+    renderScripts(scripts);
+  }catch(e){
+    console.error(e);
+    document.getElementById('scriptList').innerHTML='<p class="text-red-400">Lỗi tải script</p>';
+  }
 }
 
-function deleteScript(name){ alert('⚠ Chức năng delete cần API /api/delete'); }
-function copyRaw(name){ navigator.clipboard.writeText(`${window.location.origin}/api/raw/${name}`); alert('✅ Copied Raw!'); }
-function copyLS(name){ navigator.clipboard.writeText(`loadstring(game:HttpGet("${window.location.origin}/api/raw/${name}"))()`); alert('✅ Copied Loadstring!'); }
+async function handleFileUpload() {
+  const file = document.getElementById('fileInput').files[0];
+  if(!file) return alert('Chọn file');
+  const text = await file.text();
+  const name = document.getElementById('scriptName').value.trim();
+  if(!name) return alert('Nhập tên script');
+  await uploadScript(name, text);
+}
+
+async function handleTextUpload() {
+  const name = document.getElementById('scriptName').value.trim();
+  const text = document.getElementById('luaText').value.trim();
+  if(!name || !text) return alert('Nhập đầy đủ tên và code');
+  await uploadScript(name,text);
+}
+
+async function uploadScript(name, text){
+  try{
+    const res = await fetch('/api/upload.js',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,text})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||'Lỗi');
+    document.getElementById('uploadMsg').textContent='✅ Tải lên thành công';
+    loadScripts();
+  }catch(e){
+    document.getElementById('uploadMsg').textContent=e.message;
+  }
+}
+
+function copyRaw(name){ navigator.clipboard.writeText(`${location.origin}/api/raw/${name}`).then(()=>alert('Copied raw!')) }
+function copyLoadstring(name){ navigator.clipboard.writeText(`loadstring(game:HttpGet('${location.origin}/api/raw/${name}'))()`).then(()=>alert('Copied loadstring!')) }
+
+function editScript(name){
+  currentEdit=name;
+  const script=window.scriptsCache?.find(s=>s.name===name);
+  if(!script) return alert('Script không tồn tại');
+  document.getElementById('editName').value=name;
+  // Xóa zero-width chars
+  document.getElementById('editContent').value=script.content.replace(/\u200D/g,'');
+  document.getElementById('editModal').classList.add('active');
+}
+
+function closeModal(){ document.getElementById('editModal').classList.remove('active'); }
+
+async function saveEdit(){
+  const newName=document.getElementById('editName').value;
+  const content=document.getElementById('editContent').value;
+  try{
+    const res=await fetch('/api/update.js',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ oldName:currentEdit,newName,content })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Lỗi');
+    alert(data.message);
+    closeModal();
+    loadScripts();
+  }catch(e){ alert(e.message); }
+}
+
+async function deleteScript(name){
+  if(!confirm(`Bạn có chắc muốn xóa "${name}"?`)) return;
+  try{
+    const res=await fetch('/api/delete.js',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ name })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Lỗi');
+    alert(data.message);
+    loadScripts();
+  }catch(e){ alert(e.message); }
+}
 
 loadScripts();
 </script>

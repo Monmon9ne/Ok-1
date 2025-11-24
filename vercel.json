@@ -6,8 +6,19 @@
     { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/upload", "dest": "/api/upload.js" },
-    { "src": "/api/raw/(.*)", "dest": "/api/raw.js" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "src": "/api/upload",
+      "methods": ["POST"],
+      "dest": "/api/upload.js"
+    },
+    {
+      "src": "/api/raw/(.*)",
+      "methods": ["GET"],
+      "dest": "/api/raw.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }

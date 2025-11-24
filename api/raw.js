@@ -1,22 +1,14 @@
-import fs from "fs-extra";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const STORAGE_FILE = path.join(__dirname, "..", "scripts.json");
-
-async function loadStorage() {
-  try {
-    if (await fs.pathExists(STORAGE_FILE)) {
-      return await fs.readJSON(STORAGE_FILE);
-    }
-  } catch (err) {
-    console.error("Load error:", err.message);
-  }
-  return {};
-}
+let storage = {};
 
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   const name = req.query.name;
   const userAgent = (req.headers["user-agent"] || "").toLowerCase();
 
@@ -30,9 +22,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const storage = await loadStorage();
-
     if (!storage[name]) {
+      console.warn(`Script not found: ${name}. Available: ${Object.keys(storage).join(', ')}`);
       return res.status(404).send("❌ Không tìm thấy script này");
     }
 

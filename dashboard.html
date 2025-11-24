@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>LuaProtector Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>textarea{resize:vertical;}</style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4">
+<div class="max-w-4xl mx-auto space-y-4">
+
+<h1 class="text-2xl font-bold text-indigo-400">Dashboard</h1>
+<button onclick="logout()" class="bg-red-600 hover:bg-red-700 py-2 px-4 rounded">Logout</button>
+
+<!-- Script list -->
+<div id="scriptsList" class="space-y-2 mt-4"></div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+  <div class="bg-gray-800 p-6 rounded-xl w-full max-w-xl space-y-4">
+    <h2 class="text-xl font-bold">Edit Script</h2>
+    <input id="editName" placeholder="Script Name" class="w-full p-2 rounded bg-gray-700 border border-gray-600" />
+    <textarea id="editContent" class="w-full p-2 rounded bg-gray-700 border border-gray-600 h-64"></textarea>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal()" class="bg-gray-600 hover:bg-gray-700 py-2 px-4 rounded">Cancel</button>
+      <button onclick="saveEdit()" class="bg-indigo-500 hover:bg-indigo-600 py-2 px-4 rounded">Save</button>
+    </div>
+  </div>
+</div>
+
+</div>
+<script>
+if(localStorage.getItem('token')!=='admin-token'){window.location.href='login.html';}
+
+let storage = {}; // Lấy từ API
+let currentEdit = null;
+
+async function loadScripts(){
+  const res = await fetch('/api/list.js'); // API cần tạo
+  storage = await res.json();
+  const container=document.getElementById('scriptsList');
+  container.innerHTML=Object.keys(storage).map(name=>`
+    <div class="bg-gray-800 p-3 rounded flex justify-between items-center">
+      <div>
+        <p class="font-semibold">${name}</p>
+        <p class="text-xs text-gray-400">${storage[name].createdAt}</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="editScript('${name}')" class="bg-blue-600 px-2 py-1 rounded">Edit</button>
+        <button onclick="deleteScript('${name}')" class="bg-red-600 px-2 py-1 rounded">Delete</button>
+        <button onclick="copyRaw('${name}')" class="bg-green-600 px-2 py-1 rounded">Raw</button>
+        <button onclick="copyLS('${name}')" class="bg-purple-600 px-2 py-1 rounded">LoadString</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function logout(){localStorage.removeItem('token'); window.location.href='login.html';}
+
+function editScript(name){currentEdit=name; document.getElementById('editModal').classList.remove('hidden'); document.getElementById('editName').value=name; document.getElementById('editContent').value=storage[name].content.replace(/\u200D/g,'');}
+function closeModal(){document.getElementById('editModal').classList.add('hidden'); currentEdit=null;}
+
+async function saveEdit(){ 
+  const name=document.getElementById('editName').value;
+  const content=document.getElementById('editContent').value;
+  // Gọi API update
+  alert('⚠ Chức năng save cần API /api/update mới hoạt động'); 
+  closeModal(); 
+}
+
+function deleteScript(name){ alert('⚠ Chức năng delete cần API /api/delete'); }
+function copyRaw(name){ navigator.clipboard.writeText(`${window.location.origin}/api/raw/${name}`); alert('✅ Copied Raw!'); }
+function copyLS(name){ navigator.clipboard.writeText(`loadstring(game:HttpGet("${window.location.origin}/api/raw/${name}"))()`); alert('✅ Copied Loadstring!'); }
+
+loadScripts();
+</script>
+</body>
+</html>
